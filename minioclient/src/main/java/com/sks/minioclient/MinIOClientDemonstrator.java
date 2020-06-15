@@ -25,7 +25,7 @@ import io.minio.errors.XmlParserException;
 
 public class MinIOClientDemonstrator {
     private enum MetaDataMapper {
-        METAONE("x-amz-meta-metaone"), METATWO("x-amz-meta-metatwo");
+        METAONE("x-amz-meta-metaone"), METATWO("x-amz-meta-metatwo"), METATHREE("x-amz-meta-metathree");
         private final String key;
 
         MetaDataMapper(String key) {
@@ -66,6 +66,7 @@ public class MinIOClientDemonstrator {
             Map<String, String> headerMap = new HashMap<>();
             headerMap.put(MetaDataMapper.METAONE.toString(), "Meta data one data pushed via PutObjectOptions");
             headerMap.put(MetaDataMapper.METATWO.toString(), "Meta data two data pushed via PutObjectOptions");
+            headerMap.put(MetaDataMapper.METATHREE.toString(), "1");
             PutObjectOptions options = new PutObjectOptions(bais.available(), -1);
             options.setHeaders(headerMap);
 
@@ -108,6 +109,64 @@ public class MinIOClientDemonstrator {
         System.out.println(String.format("demonstrate - getObject - finished"));
     }
 
+    private void modifyMetaObject() {
+        System.out.println(String.format("demonstrate - modifyMetaObject - started"));
+        InputStream in = null;
+        try {
+            MinioClient client = MinIOClientProvider.getInstance().getClient();
+            in = client.getObject(bucketName, objectName);
+
+            ObjectStat objectStat = client.statObject(bucketName, objectName);
+            Map<String, List<String>> metadataMap = objectStat.httpHeaders();
+
+            List<String> data1 = metadataMap.get(MetaDataMapper.METAONE.getKey());
+            if (data1 == null) {
+                throw new Exception("Missing meta information for METAONE");
+            }
+            String value1 = data1.get(0);
+            System.out.println(String.format("Meta data key: %s value: %s", MetaDataMapper.METATWO.getKey(), value1));
+
+            List<String> data2 = metadataMap.get(MetaDataMapper.METATWO.getKey());
+            if (data2 == null) {
+                throw new Exception("Missing meta information for METATWO");
+            }
+            String value2 = data2.get(0);
+            System.out.println(String.format("Meta data key: %s value: %s", MetaDataMapper.METATWO.getKey(), value2));
+
+            List<String> data3 = metadataMap.get(MetaDataMapper.METATHREE.getKey());
+            if (data3 == null) {
+                throw new Exception("Missing meta information for METATWO");
+            }
+            String value3 = data3.get(0);
+            System.out.println(String.format("Meta data key: %s value: %s", MetaDataMapper.METATHREE.getKey(), value3));
+            Long newValue3 = Long.parseLong(value3) + 1;
+
+            PutObjectOptions options = new PutObjectOptions(in.available(), -1);
+            Map<String, String> headerMap = new HashMap<String, String>();
+            headerMap.put(MetaDataMapper.METAONE.toString(), value1);
+            headerMap.put(MetaDataMapper.METATWO.toString(), value2);
+            headerMap.put(MetaDataMapper.METATHREE.toString(), String.valueOf(newValue3));
+            options.setHeaders(headerMap);
+            client.putObject(bucketName, objectName, in, options);
+
+        } catch (InvalidEndpointException | InvalidPortException | InvalidKeyException | ErrorResponseException
+                | IllegalArgumentException | InsufficientDataException | InternalException | InvalidBucketNameException
+                | InvalidResponseException | NoSuchAlgorithmException | XmlParserException | IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        System.out.println(String.format("demonstrate - modifyMetaObject - finished"));
+    }
+
     private void getMetaData() {
         System.out.println(String.format("demonstrate - getMetaData - started"));
         try {
@@ -133,6 +192,15 @@ public class MinIOClientDemonstrator {
                 System.out
                         .println(String.format("Meta data key: %s value: %s", MetaDataMapper.METATWO.getKey(), value2));
             }
+            {
+                List<String> data3 = metadataMap.get(MetaDataMapper.METATHREE.getKey());
+                if (data3 == null) {
+                    throw new Exception("Missing meta information for METATWO");
+                }
+                String value3 = data3.get(0);
+                System.out
+                        .println(String.format("Meta data key: %s value: %s", MetaDataMapper.METATHREE.getKey(), value3));
+            }
 
         } catch (InvalidEndpointException | InvalidPortException | InvalidKeyException | ErrorResponseException
                 | IllegalArgumentException | InsufficientDataException | InternalException | InvalidBucketNameException
@@ -147,6 +215,7 @@ public class MinIOClientDemonstrator {
     public void demonstrate() {
         uploadObject();
         getObject();
+        modifyMetaObject();
         getMetaData();
     }
 }
