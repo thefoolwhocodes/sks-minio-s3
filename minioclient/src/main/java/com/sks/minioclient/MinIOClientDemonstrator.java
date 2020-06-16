@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.minio.ErrorCode;
 import io.minio.MinioClient;
 import io.minio.ObjectStat;
 import io.minio.PutObjectOptions;
@@ -99,6 +100,40 @@ public class MinIOClientDemonstrator {
             e.printStackTrace();
         } finally {
             if(in!=null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        System.out.println(String.format("demonstrate - getObject - finished"));
+    }
+
+    private void getObjectWithExistenceCheck() {
+        System.out.println(String.format("demonstrate - getObject - started"));
+        InputStream in = null;
+        try {
+            MinioClient client = MinIOClientProvider.getInstance().getClient();
+            in = client.getObject(bucketName, "someobject");
+            byte[] buffer = new byte[16 * 1024];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer, 0, buffer.length)) >= 0) {
+                System.out.println(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
+            }
+        } catch (InvalidEndpointException | InvalidPortException | InvalidKeyException | IllegalArgumentException
+                | InsufficientDataException | InternalException | InvalidBucketNameException | InvalidResponseException
+                | NoSuchAlgorithmException | XmlParserException | IOException e) {
+            e.printStackTrace();
+        } catch (ErrorResponseException e) {
+            ErrorCode code = e.errorResponse().errorCode();
+            if (code == ErrorCode.NO_SUCH_OBJECT) {
+                System.out.println(String.format("demonstrate - getObject - NO_SUCH_OBJECT"));
+            } else {
+                e.printStackTrace();
+            }
+        } finally {
+            if (in != null) {
                 try {
                     in.close();
                 } catch (IOException e) {
@@ -215,6 +250,7 @@ public class MinIOClientDemonstrator {
     public void demonstrate() {
         uploadObject();
         getObject();
+        getObjectWithExistenceCheck();
         modifyMetaObject();
         getMetaData();
     }
