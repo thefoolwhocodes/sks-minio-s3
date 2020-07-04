@@ -5,6 +5,7 @@ import io.minio.errors.InvalidEndpointException;
 import io.minio.errors.InvalidPortException;
 
 public final class MinIOClientProvider {
+    private final boolean localHostedBucket = true;
     private static MinIOClientProvider instance = null;
     private MinioClient minioClient;
 
@@ -12,8 +13,12 @@ public final class MinIOClientProvider {
     }
 
     void initClient() throws InvalidEndpointException, InvalidPortException {
-        minioClient = new MinioClient("localhost", 9000, "minioadmin", "minioadmin", false);
-
+        if (localHostedBucket) {
+            minioClient = new MinioClient("localhost", 9000, "minioadmin", "minioadmin", false);
+        } else {
+            // For AWS or Oracle S3 connectivity
+            minioClient = new MinioClient("https://XXX", "XXX", "XXX");
+        }
     }
 
     MinioClient getClient() {

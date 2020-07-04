@@ -1,14 +1,21 @@
 package com.sks.minioclient;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import io.minio.ErrorCode;
 import io.minio.MinioClient;
@@ -40,6 +47,9 @@ public class MinIOClientDemonstrator {
 
     private final String bucketName = "my-bucketname-one";
     private final String objectName = "my-objectName-one";
+
+    private final String bucketNameTwo = "hughes-redo-bucket";
+    private final String objectNameTwo = "my-objectName-two";
 
     private void uploadObject() {
         System.out.println(String.format("demonstrate - uploadObject - started"));
@@ -99,7 +109,7 @@ public class MinIOClientDemonstrator {
                 | InvalidResponseException | NoSuchAlgorithmException | XmlParserException | IOException e) {
             e.printStackTrace();
         } finally {
-            if(in!=null) {
+            if (in != null) {
                 try {
                     in.close();
                 } catch (IOException e) {
@@ -132,6 +142,185 @@ public class MinIOClientDemonstrator {
             } else {
                 e.printStackTrace();
             }
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        System.out.println(String.format("demonstrate - getObject - finished"));
+    }
+
+    private void uploadCollectionDataAsObject() {
+        System.out.println(String.format("demonstrate - uploadCollectionDataAsObject - started"));
+        try {
+            MinioClient client = MinIOClientProvider.getInstance().getClient();
+
+            boolean bucketExists = client.bucketExists(bucketNameTwo);
+            if (!bucketExists) {
+                System.out.println(String.format("demonstrate - going to create bucket: " + bucketNameTwo));
+                client.makeBucket(bucketNameTwo);
+            } else {
+                System.out.println(String.format("demonstrate - bucket exists already: " + bucketNameTwo));
+            }
+
+            Set<Integer> set = new HashSet<Integer>();
+            set.add(1);
+            set.add(2);
+            set.add(3);
+            set.add(4);
+            set.add(5);
+            Collection<Integer> col = set;
+
+            ArrayList<Integer> alist = new ArrayList<>(col);
+            byte[] bArray = null;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream objOstream = new ObjectOutputStream(baos);
+            objOstream.writeObject(alist);
+            // objOstream.close();
+            bArray = baos.toByteArray();
+            baos.close();
+
+            InputStream is = new ByteArrayInputStream(bArray);
+            PutObjectOptions options = new PutObjectOptions(is.available(), -1);
+            client.putObject(bucketNameTwo, objectNameTwo, is, options);
+            is.close();
+
+            System.out.println("Uploaded successfully object: " + objectNameTwo);
+        } catch (InvalidEndpointException | InvalidPortException | InvalidKeyException | ErrorResponseException
+                | IllegalArgumentException | InsufficientDataException | InternalException | InvalidBucketNameException
+                | InvalidResponseException | NoSuchAlgorithmException | XmlParserException | IOException
+                | RegionConflictException e) {
+            e.printStackTrace();
+        }
+        System.out.println(String.format("demonstrate - uploadCollectionDataAsObject - finished"));
+    }
+
+    private void getObjectAndModifyCollectionData() {
+        System.out.println(String.format("demonstrate - getObjectAndModifyCollection - started"));
+        InputStream in = null;
+        try {
+            MinioClient client = MinIOClientProvider.getInstance().getClient();
+            in = client.getObject(bucketNameTwo, objectNameTwo);
+
+            ObjectInputStream ois = new ObjectInputStream(in);
+
+            ArrayList<Integer> arrayRemoveList = new ArrayList<Integer>();
+            arrayRemoveList.add(1);
+            arrayRemoveList.add(2);
+
+            ArrayList<Integer> arraylist = new ArrayList<Integer>();
+            arraylist = (ArrayList) ois.readObject();
+            Set set = new HashSet(arraylist);
+            set.add(1);
+            set.add(6);
+            set.removeAll(arrayRemoveList);
+            System.out.println(set);
+
+        } catch (InvalidEndpointException | InvalidPortException | InvalidKeyException | IllegalArgumentException
+                | InsufficientDataException | InternalException | InvalidBucketNameException | InvalidResponseException
+                | NoSuchAlgorithmException | XmlParserException | IOException e) {
+            e.printStackTrace();
+        } catch (ErrorResponseException e) {
+            ErrorCode code = e.errorResponse().errorCode();
+            if (code == ErrorCode.NO_SUCH_OBJECT) {
+                System.out.println(String.format("demonstrate - getObjectAndModifyCollection - NO_SUCH_OBJECT"));
+            } else {
+                e.printStackTrace();
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        System.out.println(String.format("demonstrate - getObject - finished"));
+    }
+
+    private void uploadCollectionDataAsObjectSet() {
+        System.out.println(String.format("demonstrate - uploadCollectionDataAsObject - started"));
+        try {
+            MinioClient client = MinIOClientProvider.getInstance().getClient();
+
+            boolean bucketExists = client.bucketExists(bucketNameTwo);
+            if (!bucketExists) {
+                System.out.println(String.format("demonstrate - going to create bucket: " + bucketNameTwo));
+                client.makeBucket(bucketNameTwo);
+            } else {
+                System.out.println(String.format("demonstrate - bucket exists already: " + bucketNameTwo));
+            }
+
+            Set<Integer> set = new HashSet<Integer>();
+            set.add(1);
+            set.add(2);
+            set.add(3);
+            set.add(4);
+            set.add(5);
+            Collection<Integer> col = set;
+
+            byte[] bArray = null;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream objOstream = new ObjectOutputStream(baos);
+            objOstream.writeObject(set);
+            // objOstream.close();
+            bArray = baos.toByteArray();
+            baos.close();
+
+            InputStream is = new ByteArrayInputStream(bArray);
+            PutObjectOptions options = new PutObjectOptions(is.available(), -1);
+            client.putObject(bucketNameTwo, objectNameTwo, is, options);
+            is.close();
+
+            System.out.println("Uploaded successfully object: " + objectNameTwo);
+        } catch (InvalidEndpointException | InvalidPortException | InvalidKeyException | ErrorResponseException
+                | IllegalArgumentException | InsufficientDataException | InternalException | InvalidBucketNameException
+                | InvalidResponseException | NoSuchAlgorithmException | XmlParserException | IOException
+                | RegionConflictException e) {
+            e.printStackTrace();
+        }
+        System.out.println(String.format("demonstrate - uploadCollectionDataAsObject - finished"));
+    }
+
+    private void getObjectAndModifyCollectionDataSet() {
+        System.out.println(String.format("demonstrate - getObjectAndModifyCollection - started"));
+        InputStream in = null;
+        try {
+            MinioClient client = MinIOClientProvider.getInstance().getClient();
+            in = client.getObject(bucketNameTwo, objectNameTwo);
+
+            ObjectInputStream ois = new ObjectInputStream(in);
+
+            ArrayList<Integer> arrayRemoveList = new ArrayList<Integer>();
+            arrayRemoveList.add(1);
+            arrayRemoveList.add(2);
+
+            Set<Integer> set = new HashSet();
+            set = (Set) ois.readObject();
+            set.add(1);
+            set.removeAll(arrayRemoveList);
+            System.out.println(set);
+
+        } catch (InvalidEndpointException | InvalidPortException | InvalidKeyException | IllegalArgumentException
+                | InsufficientDataException | InternalException | InvalidBucketNameException | InvalidResponseException
+                | NoSuchAlgorithmException | XmlParserException | IOException e) {
+            e.printStackTrace();
+        } catch (ErrorResponseException e) {
+            ErrorCode code = e.errorResponse().errorCode();
+            if (code == ErrorCode.NO_SUCH_OBJECT) {
+                System.out.println(String.format("demonstrate - getObjectAndModifyCollection - NO_SUCH_OBJECT"));
+            } else {
+                e.printStackTrace();
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         } finally {
             if (in != null) {
                 try {
@@ -233,8 +422,8 @@ public class MinIOClientDemonstrator {
                     throw new Exception("Missing meta information for METATWO");
                 }
                 String value3 = data3.get(0);
-                System.out
-                        .println(String.format("Meta data key: %s value: %s", MetaDataMapper.METATHREE.getKey(), value3));
+                System.out.println(
+                        String.format("Meta data key: %s value: %s", MetaDataMapper.METATHREE.getKey(), value3));
             }
 
         } catch (InvalidEndpointException | InvalidPortException | InvalidKeyException | ErrorResponseException
@@ -251,6 +440,10 @@ public class MinIOClientDemonstrator {
         uploadObject();
         getObject();
         getObjectWithExistenceCheck();
+        uploadCollectionDataAsObject();
+        getObjectAndModifyCollectionData();
+        uploadCollectionDataAsObjectSet();
+        getObjectAndModifyCollectionDataSet();
         modifyMetaObject();
         getMetaData();
     }
